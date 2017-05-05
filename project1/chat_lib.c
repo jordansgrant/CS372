@@ -62,9 +62,9 @@ void* chat_recv_t(void* args) {
 void* chat_send_t(void *args){
   chat_sock sock = *(chat_sock *)args;
   int retval;
-  size_t buff_cap = BUFFER_START_SIZE;
-  char *buffer = calloc(buff_cap, sizeof(char)),
-       buff_size = 0;
+  size_t buff_cap = BUFFER_START_SIZE,
+         buff_size = 0;
+  char *buffer = calloc(buff_cap, sizeof(char));
   prompt(sock, sock.handle, 1);
   do {
     int ch;
@@ -114,7 +114,8 @@ void* chat_send_t(void *args){
           break;
         default:
           if (isprint(ch)) {      
-            buffer[buff_size++] = ch;
+            buffer[buff_size] = ch;
+            buff_size += 1;
             waddch(sock.win, ch);
             wrefresh(sock.win);
           }
