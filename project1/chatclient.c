@@ -111,10 +111,7 @@ int main( int argc, char **argv ) {
         fprintf(stderr, "Failed to read from socket\n");
         continue;
       }
-      printf("Now connected with %s\n", buffer);
-
-      free(buffer);
-      buffer = NULL;
+      
 
       WINDOW *stdscr = initscr();
       cbreak();
@@ -122,6 +119,7 @@ int main( int argc, char **argv ) {
       start_color();
       init_pair(1, COLOR_GREEN, COLOR_BLACK);
       init_pair(2, COLOR_CYAN, COLOR_BLACK);
+	  init_pair(3, COLOR_RED, COLOR_BLACK);
 
       int lines = (LINES - 1) / 2;
       send.win = subwin(stdscr,lines, COLS-1, 0, 0);
@@ -135,6 +133,16 @@ int main( int argc, char **argv ) {
       
       wrefresh(send.win);
       wrefresh(recv.win);
+	  
+	  attron(COLOR_PAIR(3));
+	  waddstr(recv.sock, "You are now connected to ");
+	  waddstr(recv.sock, buffer);
+	  waddch(recv.sock, '\n');
+	  wrefresh(recv.sock);
+	  attroff(COLOR_PAIR(3));
+
+      free(buffer);
+      buffer = NULL;
 
       int success = pthread_create(&threads[0], NULL, &chat_recv_t, &recv);
       if (success != 0) {
