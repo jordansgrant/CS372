@@ -18,7 +18,7 @@
 #include <sys/wait.h>         // contains wait functions
 #include <unistd.h>           // contains std unix sys calls, like fork
 
-#define CONN_COUNT 5          // max connection count
+#define CONN_COUNT 1          // max connection count
 #define BUFFER_START_SIZE 100 // start size of resv buffer
 
 #define ALT_BACKSPACE 127

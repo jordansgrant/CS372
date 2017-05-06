@@ -98,7 +98,7 @@ int main( int argc, char **argv ) {
         fprintf(stderr, "Connect Error: %s\n", strerror(errno));
         continue;
       }
-      
+
       *close_d = 0;
       send.close = close_d;
       send.sock_fd = conn_fd;
@@ -111,7 +111,7 @@ int main( int argc, char **argv ) {
         fprintf(stderr, "Failed to read from socket\n");
         continue;
       }
-      
+
 
       WINDOW *stdscr = initscr();
       cbreak();
@@ -119,27 +119,27 @@ int main( int argc, char **argv ) {
       start_color();
       init_pair(1, COLOR_GREEN, COLOR_BLACK);
       init_pair(2, COLOR_CYAN, COLOR_BLACK);
-	  init_pair(3, COLOR_RED, COLOR_BLACK);
+	    init_pair(3, COLOR_YELLOW, COLOR_BLACK);
 
       int lines = (LINES - 1) / 2;
       send.win = subwin(stdscr,lines, COLS-1, 0, 0);
       recv.win = subwin(stdscr,lines, COLS-1, lines+1, 0);
       nodelay(stdscr, TRUE);
-      
+
       keypad(send.win, TRUE);
       scrollok(send.win, TRUE);
 
       scrollok(recv.win, TRUE);
-      
+
       wrefresh(send.win);
       wrefresh(recv.win);
-	  
-	  attron(COLOR_PAIR(3));
-	  waddstr(recv.sock, "You are now connected to ");
-	  waddstr(recv.sock, buffer);
-	  waddch(recv.sock, '\n');
-	  wrefresh(recv.sock);
-	  attroff(COLOR_PAIR(3));
+
+	  wattron(recv.win,COLOR_PAIR(3));
+	  waddstr(recv.win, "You are now connected to ");
+	  waddstr(recv.win, buffer);
+	  waddch(recv.win, '\n');
+	  wrefresh(recv.win);
+	  wattroff(recv.win,COLOR_PAIR(3));
 
       free(buffer);
       buffer = NULL;
@@ -161,7 +161,7 @@ int main( int argc, char **argv ) {
       for (i = 0; i < 2; i++)
         if (pthread_join(threads[i], NULL) != 0)
           perror("Failed Thread Join\n");
-      
+
       wclear(send.win);
       wclear(recv.win);
       wrefresh(send.win);
@@ -222,7 +222,7 @@ int main( int argc, char **argv ) {
     scrollok(send.win, TRUE);
 
     scrollok(recv.win, TRUE);
-    
+
     wrefresh(send.win);
     wrefresh(recv.win);
 

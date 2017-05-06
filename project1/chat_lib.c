@@ -24,6 +24,7 @@ void* chat_recv_t(void* args) {
     buffer_size = getSockMessage(sock.sock_fd, &buffer);
     if (buffer_size < 0) {
       *(sock.close) = 1;
+      close(sock.sock_fd);
       return NULL;
     }
     else if (strstr(buffer, "\\quit") != NULL) {
@@ -102,6 +103,7 @@ void* chat_send_t(void *args){
             if (retval < 0) {
               waddstr(sock.win, "Failed to write to socket :(\n");
               wrefresh(sock.win);
+              close(sock.sock_fd);
               *(sock.close) = 1;
               return NULL;
             }
@@ -113,7 +115,7 @@ void* chat_send_t(void *args){
           wrefresh(sock.win);
           break;
         default:
-          if (isprint(ch)) {      
+          if (isprint(ch)) {
             buffer[buff_size] = ch;
             buff_size += 1;
             waddch(sock.win, ch);
@@ -234,7 +236,7 @@ void prompt(chat_sock sock, char *prompt, int color) {
   int len = strlen(prompt),
       i = 0;
 
-  for (; i < len; i++) 
+  for (; i < len; i++)
     waddch(sock.win, prompt[i] | COLOR_PAIR(color));
   waddch(sock.win, '>' | COLOR_PAIR(color));
   waddch(sock.win, ' ');
