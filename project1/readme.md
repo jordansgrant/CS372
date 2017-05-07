@@ -44,7 +44,7 @@ Upon a \quit message the following will happen:
 * chatclient will terminate
 * chatserve will prepare to accept another connection
 
-_chatserv will not handle multiple connections as it won't call accept again until the send and receive threads join with the main thread_
+_chatserv will not handle multiple connections at once as it won't call accept again until the send and receive threads join with the main thread_
 
 ### TESTING
 
