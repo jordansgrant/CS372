@@ -1,6 +1,6 @@
 /*******************************************************************************
-** Program: otp_lib.h (library header)
-** Project: CS344 Program 4 OTP
+** Program: project 1, chatclient
+** Project: CS372 Project 1
 ** Author: Jordan Grant (grantjo)
 *******************************************************************************/
 #ifndef CHAT_LIB_H
@@ -24,12 +24,12 @@
 #define ALT_BACKSPACE 127
 #define ALT_ENTER 10
 
+// Contains information to be passed to threads for seding/receiving data
 struct chat_sock {
-	int sock_fd;
-	int *close;
-	int serv;
-	char handle[11];
-	WINDOW *win;
+	int sock_fd;					// file descripter
+	int *close;						// flag to close connection
+	char handle[11];			// user handle
+	WINDOW *win;					// ncurses window
 };
 
 typedef struct chat_sock chat_sock;
@@ -56,7 +56,7 @@ void* chat_send_t(void *args);
 ** Function: getSockMessage
 ** Paramaters: int file descripter of socket connection
 **             char** buffer to read into
-** Description: reads entire message terminated with '#' sigil from socket.
+** Description: reads entire message terminated with '\n' sigil from socket.
 ** Return: -1 if error, number of bytes read if successful
 *******************************************************************************/
 int getSockMessage(int fd, char **buffer);
@@ -81,8 +81,24 @@ int sendSockMessage(int fd, char *to_send, int size);
 *******************************************************************************/
 void resizeBuffer(char **buffer, int new_cap);
 
+/*******************************************************************************
+ ** Function: prepend_handle
+ ** Paramaters: char* handle
+ **             size_t* buffer capacity
+ **             char** buffer to prepend handle to
+ ** Description: prepends user handle with prompt deliminator seperating message
+ ** Return: void
+ *******************************************************************************/
 void prepend_handle(char* handle, size_t *buff_cap, char** buffer);
 
+/*******************************************************************************
+ ** Function: prompt
+ ** Paramaters: chat_sock
+ **             char* prompt
+ **             int index of color pair
+ ** Description: prints prompt to screen with color
+ ** Return: void
+ *******************************************************************************/
 void prompt(chat_sock sock, char *prompt, int color);
 
 #endif
