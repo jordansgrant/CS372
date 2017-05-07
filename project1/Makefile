@@ -1,5 +1,4 @@
 CC=gcc
-CFLAGS=-Wall -pedantic-errors -Werror
 LIBFLAGS=-lpthread -lncurses
 
 all: chatclient
