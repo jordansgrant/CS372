@@ -1,4 +1,4 @@
-/*********************************************************************************
+/**********************************************************************************
  ** Program: 	chatclient
  ** Project: 	CS372 Project 1
  ** Author:  	Jordan Grant (grantjo)
@@ -7,6 +7,35 @@
  **				setting up client-server status, creating socket connection, setting up
  **       ncurses windows, and handing off chat services to chat_send_t and
  **       chat_recv_t
+ **
+ **       chatserv is a python program responsible for makeing a client/server 
+ **       connection to a remote host and setting up a chat session.
+ **            
+ **       The server mode waits on a specified port and accepts new connections
+ **       until a SIGINT occurs
+ **       The client mode initiates a connection with a remote server instance
+ ** 
+ **       server mode is specified by only passing a port number to the program
+ **       client mode is specified by passing a hostname as well as a portnumber
+ ** 
+ **       usage: ./chatclient port [host]
+ ** 
+ **       once a connection is made a curses window is partitioned into 2
+ **       segments, 1 for sent information and 1 for received. Then a separate
+ **       thread is started for receiving and sending.
+ ** 
+ **       After initial setup the two peers can exchange information until one
+ **       or the other sends a \quit command terminating the connection 
+ **
+ ** EXTRA CREDIT
+ **
+ ** 1. Program was developed so that either chatclient or chatserve can make the 
+ **    initial communication
+ ** 2. Both hosts may send at anytime without having to trade off 
+ ** 3. Execution of the sending and receiving is done in sepearate threads
+ ** 4. The screen is split using ncurses library so that the user input and 
+ **    responses are in separate panels
+ ** 5. Color is used to give contrast between the handle prompts and the messages
  *********************************************************************************/
 #include "chat_lib.h"
 #include <pthread.h>
