@@ -118,6 +118,7 @@ int main( int argc, char **argv ) {
       buffer = NULL;
       continue;
     }
+    // get the address of the connected client
     inet_ntop(AF_INET, &(cli_addr.sin_addr), cli_address, INET_ADDRSTRLEN);
     
     // If we are under the max connections, fork off a child to handle the
@@ -131,39 +132,46 @@ int main( int argc, char **argv ) {
         break;
         // Child starts here
       case 0:
+        // get pid of child
         myid = getpid();
         printf("Connection initiated with child %d\n", myid);
         exit_d = 0;       // client sends exit command
         do {
+          // get message from client, check for errors
           retval = getSockMessageCmd(conn_fd, &buffer);
           if (retval < 0) {
             fprintf(stderr, "Child %d failed to read socket and closed\n", myid);
             close(conn_fd);
             exit(2);
           }
+          // split command by & if present
           c = strchr(buffer, '&');
           if ( c != NULL ) {
             *c = 0;
             c++;
           }
-
+          // handle change directory, check for errors
           if ( strstr(buffer, "cd") != NULL ) {
             retval = handle_cd(buffer, conn_fd);
             exit_d = (retval == -2) ? 1 : 0;
           }
+          // handle exit request, alert client we got the message
           else if ( strstr(buffer, "exit") != NULL ) {
             retval = sendSockMessage(conn_fd, "Exiting\n", 8);
             exit_d = 1;
           }
+          // handle list request check for errors
           else if ( strstr(buffer, "ls") != NULL ) { 
             retval = handle_ls(buffer, c, cli_address, conn_fd);
             exit_d = (retval == -2) ? 1 : 0;
           }
+          // handle the get request, check for errors
           else if ( strstr(buffer, "get") != NULL ) {
             retval = handle_get(buffer, c,cli_address, conn_fd);
             exit_d = (retval == -2) ? 1 : 0;
           }
           else if ( strstr(buffer, "help" ) != NULL ){
+            // send command list to client
             retval = sendSockMessage(conn_fd, comm_list, strlen(comm_list));
             if ( retval < 0 ) {
               fprintf(stderr, "Child %d failed to write socket and closed\n", myid);
@@ -171,16 +179,18 @@ int main( int argc, char **argv ) {
             }
           }
           else {
+            // command not known alert client
             retval = sendSockMessage(conn_fd, "Error: unknown command\n", 23);
             if (retval < 0) {
               fprintf(stderr, "Child %d failed to write socket and closed\n", myid);
               exit_d = 1;
             }
           }
-
+          
           free(buffer);
           buffer = NULL;
         } while ( !exit_d );
+        // close connection to child when exiting
         close(conn_fd);
         printf("Child %d has exited\n", myid);
         break;
@@ -190,7 +200,8 @@ int main( int argc, char **argv ) {
         close(conn_fd);
         break;
     }
-
+  // loop until close_d set
   } while( !close_d  );
+  // close listen fd
   close(listen_fd);
 }

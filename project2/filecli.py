@@ -4,32 +4,23 @@
 # Author:   Jordan Grant (grantjo)
 # File:     filecli.py
 # Function: filecli is a python program responsible for makeing a client/server 
-#           connection to a remote host and setting up a chat session.
+#           connection to a remote host and setting up a file transfer session.
+#
+#           The client connects on a command port to the server and initiates
+#           commands to change directory, get help, exit, list files, or get
+#           a file. If a list or get command is issued the client listens on
+#           a port and the server connects and sends the data over this
+#           secondary connection. The connection is then closed and the session
+#           continues.
 #           
-#           The server mode waits on a specified port and accepts new connections
-#           until a SIGINT occurs
-#           The client mode initiates a connection with a remote server instance
-#
-#           server mode is specified by only passing a port number to the program
-#           client mode is specified by passing a hostname as well as a portnumber
-#
-#           usage: ./chatserve.py port [host]
-#
-#           once a connection is made a curses window is partitioned into 2
-#           segments, 1 for sent information and 1 for received. Then a separate
-#           thread is started for receiving and sending.
-#
-#           After initial setup the two peers can exchange information until one
-#           or the other sends a \quit command terminating the connection 
 # EXTRA CREDIT
 #
-# 1. Program was developed so that either chatclient or chatserve can make the
-#    initial communication
-# 2. Both hosts may send at anytime without having to trade off 
-# 3. Execution of the sending and receiving is done in sepearate threads
-# 4. The screen is split using ncurses library so that the user input and 
-#    responses are in separate panels
-# 5. Color is used to give contrast between the handle prompts and the messages
+# 1. Sever forks off a new process for each connection so it can service
+#    multiple clients
+# 2. The client is interactive rather than only doing one round per call of the
+#    python program. ie user inputs the commands rather than arguments
+# 3. Client handles data in a separate thread
+# 4. Client can change directory on the server
 import os.path
 import select
 import sys
@@ -40,10 +31,6 @@ import threading
 conn_count = 1
 # close flag for threads
 close = 0
-
-# declare globals for typical backspace and enter characters
-ALT_BACKSPACE = 127
-ALT_ENTER = 10
 
 # chat_sock class, specifies utilities for creating and managing sockets
 # members: sock         - the actual socket connection
@@ -109,22 +96,29 @@ class file_sock(object):
             message = message + temp;
         # return message, less the sigil
         return message.replace("\n", "")
+    # getSockStreamFile - streams data over socket to a file name fname or
+    # fname incremented if collision
     def getSockStreamFile(self, fname):
       # init message, size, and size_found variables
        size = -1
        size_found = 0
        chars_recv = 0;
        wfile = None;
+       # split filename from path
        head, tail = os.path.split(fname)
+       #if file already exists
        if ( os.path.exists(tail) ):
+           #split extension from file name
            file_n, file_e = os.path.splitext(tail)
            i = 1
+           # loop until an unused incremented filename is found
            while os.path.exists("%s%d%s" % (file_n, i, file_e)):
                i += 1
+           #store new incremented filename
            tail = "%s%d%s" % (file_n, i, file_e)
-
+       #open file
        wfile = open(tail, "wb")
-
+       # return error if failed
        if not wfile:
            return -1
 
@@ -135,14 +129,14 @@ class file_sock(object):
            #if null is returned socket failed
            if temp == '':
              return -1
-
+           #if size has not been stored yet, pull from message and store
            if not size_found:
                split_s = temp.split(" ", 1)
                size = int(split_s[0])
                temp = split_s[1]
                size_found = 1
-
            chars_recv += len(temp)
+           #write chunk to file
            wfile.write(temp)
        return chars_recv
 
@@ -154,11 +148,11 @@ class file_client(object):
         self.cmd_sock = sock
         self.data_sock = None;
         self.fname= ""
-    # save data to file thread
+    # save data to file thread, used for get command
     def save_data_t(self):
         server = self.data_sock.accept()
         server.getSockStreamFile(self.fname)
-
+    # print data thread, used for ls command
     def print_data_t(self):
         server = self.data_sock.accept()
         message = server.getSockMessage()
@@ -179,97 +173,133 @@ if not sys.argv[1].isdigit():
 port = int(sys.argv[1])
 # create socket and attempt connection, throw exception on error
 sock = file_sock()
+# connect to server, throw error if failed
 sock.connect(sys.argv[2], port)
+# create client object
 client = file_client(sock)
-
+# clear exit flag
 exit_d = 0
-
+# loop untl exit flag set
 while not exit_d :
+    # get user input
     cmd = raw_input("\nEnter a command or help for list of command\n")
 
     if cmd == "":
       continue
+    # get command requested
     elif cmd.find("get") == 0:
+      # create data sock, start listening on port determined by os
       client.data_sock = file_sock()
       client.data_sock.serv(0)
+      # store fname in variable
       client.fname = cmd[cmd.find(' ')+1:]
+      # create thread object and start thread
       data_t = threading.Thread(target=client.save_data_t, name="data_t")
       data_t.start()
-
+      # send command to server
       client.cmd_sock.sendSockMessage("%s&%d\n" % (cmd,client.data_sock.get_serv_port()))
 
       error = 0
+      # while thread is active
       while data_t.isAlive():
+          # check if an error message has come from the server
           r, w, e = select.select([client.cmd_sock.sock], [], [], 0.1)
           if r:
               message = client.cmd_sock.getSockMessage()
+              # handle error on cmd socket
               if isinstance( message, (int, long) ):
                   client.data_sock.close()
                   client.data_sock = None
                   print >> sys.stderr, "Error reading from command socket"
+              # handle error from server, close data socket
               elif message.find("Error") >= 0:
                   print >> sys.stderr, message
                   client.data_sock.close()
                   client.data_sock = None
+                  error = 1
       data_t.join()
       if not error:
+        # send finished message if no error
         client.cmd_sock.sendSockMessage("fin\n")
         message = client.cmd_sock.getSockMessage()
+        # check for command socket error
         if isinstance( message, (int, long) ):
             print >> sys.stderr, "Error reading from command socket"
             exit_d = 1
             client.cmd_sock.close()
-
+        # print error if server sent and error on the ack message
         elif message.find("ack_fin") < 0:
             print >> sys.stderr, "Error in ack from server, %s" % (message)
+        #close data socket
         client.data_sock.close();
         client.data_sock = None
-
+    # ls command requestd
     elif cmd == "ls":
+      # create data socket, listen on port determined by os
       client.data_sock = file_sock()
       client.data_sock.serv(0)
       client.fname = ""
+      # setup thread object and start thread listening
       data_t = threading.Thread(target=client.print_data_t, name="data_t")
       data_t.start()
+      # send request to server
       client.cmd_sock.sendSockMessage("%s&%d\n" % (cmd,client.data_sock.get_serv_port()))
       error = 0
+      # loop while data thread is alive
       while data_t.isAlive():
+          #listen for errors from the server
           r, w, e = select.select([client.cmd_sock.sock], [], [], 0.1)
           if r:
               message = client.cmd_sock.getSockMessage()
+              # report error on cmd socket
               if isinstance( message, (int, long) ):
                   client.data_sock.close()
                   client.data_sock = None
                   print >> sys.stderr, "Error reading from command socket"
+              # report error from server
               elif message.find("Error") >= 0:
                   print >> sys.stderr, message
                   client.data_sock.close()
                   client.data_sock = None
+                  error = 1
       data_t.join()
       if not error: 
+        # if no error send finished message
         client.cmd_sock.sendSockMessage("fin\n")
+        # get acknowledgement
         message = client.cmd_sock.getSockMessage()
+        # check for error on cmd socket
         if isinstance( message, (int, long) ):
             print >> sys.stderr, "Error reading from command socket"
             exit_d = 1
             client.cmd_sock.close()
+        #check for error on ack from server
         if message.find("ack_fin") < 0:
             print >> sys.stderr, "Error in ack from server, %s" % (message)
+        #close data socket
         client.data_sock.close()
         client.data_sock = None
-
+    #exit command requested
     elif cmd == "exit":
+      #set exit flag
       exit_d = 1
+      # alert server of the exit
       client.cmd_sock.sendSockMessage("%s\n" % (cmd))
+      # get response from server
       message = client.cmd_sock.getSockMessage()
+      # print response and close socket
       print "Server responded %s" % (message)
       client.cmd_sock.close()
-
+    # other commands
     else:
+      # send command to server
       client.cmd_sock.sendSockMessage("%s\n" % (cmd))
+      # get response
       message = client.cmd_sock.getSockMessage()
+      # check for error and print if so
       if message.find("Error") >= 0:
           print >> sys.stderr, message
+      # else print list delimited by &
       else:
           list = message.split("&")
           for l in list:
