@@ -23,7 +23,7 @@ int handle_cd(char *cmd, int cmd_fd) {
     return (success < 0) ? -2 : 0; 
   }
   
-  sprintf(message, "%s", "Success: moved to %s\n", c);
+  sprintf(message,  "Success: moved to %s\n", c);
   success = sendSockMessage(cmd_fd, message, strlen(message));
   return (success < 0) ? -2 : 0;
 }
@@ -64,8 +64,7 @@ int handle_ls(char *cmd, char *port_s, char *cli_addr, int cmd_fd) {
      while ((dir = readdir(d)) != NULL)
      {
         char file[100];;
-        if (dir->d_type == DT_DIR && 
-            (strcmp(dir->d_name, ".") != 0 && strcmp(dir->d_name, "..") != 0)) {
+        if (dir->d_type == DT_DIR) {
            sprintf(file, "%s/&", dir->d_name);
         } else {
            sprintf(file, "%s&", dir->d_name);

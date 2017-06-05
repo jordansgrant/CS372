@@ -4,7 +4,7 @@
 int conn_count = 0,
     close_d = 0;
 
-char *comm_list = "cd <path>&ls&get <file>&help\n"; 
+char *comm_list = "cd <path>&ls&get <file>&help&exit\n"; 
 
 // Signal Handler for SIGCHLD
 // Simply decrements open connection count then reaps child process
@@ -19,9 +19,7 @@ void handle_SIGCHLD(int signo) {
 void handle_SIGINT(int signo) {
   pid_t wpid;
   int status;
-  printf("Reaping Children...");
   while ( (wpid = wait(&status)) > 0 ) {}
-  printf("done\nInitiating close...");
   close_d = 1;
 }
 
@@ -184,7 +182,7 @@ int main( int argc, char **argv ) {
           buffer = NULL;
         } while ( !exit_d );
         close(conn_fd);
-        printf("Child %d has exited", myid);
+        printf("Child %d has exited\n", myid);
         break;
         // Close socket and increment connections in parent
       default:
@@ -195,5 +193,4 @@ int main( int argc, char **argv ) {
 
   } while( !close_d  );
   close(listen_fd);
-  printf("done\nGoodbye!\n");
 }
